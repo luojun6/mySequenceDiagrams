@@ -1,0 +1,117 @@
+title China_GDPR_headunit_sync_with_OEM_TSP v1.1
+
+actor #6495ED "user" as user
+boundary "HMI" as HMI #gold
+# control UserSetting #gold
+control "PrivacyService" as Privacy #gold
+entity "SqliteDB" as DB #gold
+boundary ClientGateway #gold
+boundary "OEM_TSP" as TSP #2980B9
+
+note over HMI, ClientGateway #F9E79F: The actuall implemented service name is different.
+
+activate user #6495ED
+activate HMI #gold
+# activate UserSetting #gold
+activate Privacy #gold
+activate DB #gold
+activate ClientGateway #gold
+
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+
+
+group #gold PrivacyClaimPopup [Occurrs post activation process or head unit s/w fota upgraded]
+Privacy->DB: get("currentLoginUser")
+DB-->Privacy: return userID
+Privacy->DB: get(userID, "PrivateAuth")
+DB-->Privacy: return PrivateAuth
+
+alt #A93226 0 == PrivateAuth.PrivateSwSts
+Privacy->Privacy: break
+else 1 == PrivateAuth.PrivateSwSts 
+note over HMI, Privacy #F9E79F: There will be a popup if user never agree or factory reset.
+Privacy->HMI: popup(PrivacyClaim)
+
+
+alt #6495ED "disagreed" == PrivacyClaim.result
+user->HMI: click("disagreed")
+HMI-->Privacy: return PrivacyClaim.result
+Privacy->Privacy: break
+else "agreed" == PrivacyClaim.result
+user->HMI: click("agreed")
+HMI-->Privacy: return PrivacyClaim.result
+Privacy->Privacy: update(PrivateAuth.PrivateSwSts)
+Privacy->HMI: popup(PrivacyAuthSetting)
+note over user, Privacy #lightblue: PrivacyAuthSetting includes: microphone, camera and position
+user->HMI: Complete PrivacyAuthSetting and click [next]
+HMI-->Privacy: return PrivacyAuthSetting
+Privacy->Privacy: update(PrivateAuth.PosAuthSts)
+Privacy->Privacy: break
+#PrivacyClaim
+end
+
+Privacy->DB: async set("PrivateAuth", PrivateAuth)
+
+DB-->Privacy: return success
+Privacy->ClientGateway: async post(PrivateAuth)
+ClientGateway->TSP: async https.post(PrivateAuth)
+activate TSP #2980B9
+TSP-->ClientGateway: https.response(202)
+deactivate TSP
+
+# PrivateAuth.PrivateSwSts
+end
+
+
+# PrivacyClaimPopup
+end 
+
+
+group #gold OnChangePrivacySetting  [User modifies the privacy setting on HMI]
+
+user->HMI: modify PrivacySetting
+HMI->Privacy: async dispatch
+Privacy->DB: async set("PrivateAuth", PrivateAuth)
+DB-->Privacy: return success
+Privacy->ClientGateway: async post(PrivateAuth)
+ClientGateway->TSP: async https.post(PrivateAuth)
+activate TSP #2980B9
+TSP-->ClientGateway: https.response(202)
+deactivate TSP
+
+# PrivacySettingChanged
+end
+
+group #gold UnhappyPathFailedToSync [Headunit failed to sync with cloud]
+
+loop #red FailedToSync [retryCount < 3]
+Privacy->ClientGateway: async post(PrivateAuth)
+ClientGateway->TSP: async https.post(PrivateAuth)
+TSP-->ClientGateway: response(400/404) or timeout
+end
+ClientGateway->DB: set("PrivateAuthSync" false)
+
+==HeadUnit initialization in next powerup cycle==#gold
+
+alt #6495ED PrivateAuthSync == false
+Privacy->DB: async get("PrivateAuthSync")
+DB-->Privacy: return false
+
+loop #red FailedToSync [retryCount < 3]
+Privacy->ClientGateway: async post(PrivateAuth)
+ClientGateway->TSP: async https.post(PrivateAuth)
+TSP-->ClientGateway: response(400/404) or timeout
+end
+ClientGateway->DB: set("PrivateAuthSync" false)
+
+#UnhappyPathFailedToSync
+end 
+
+# PowerUpSync
+end 
+
+
+
+
+

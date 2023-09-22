@@ -1,0 +1,89 @@
+title headunit_day_night_mode_sync_with_ipk v1.0
+
+actor #6495ED user
+boundary HMI #gold
+control userSetting #gold
+boundary CAF #gold
+control jarvis #gold
+control mapApp #gold
+control ipkApp #gold
+control ipkMap #gold
+# entity "UserDB" as DB #gold
+
+boundary carService #gold
+boundary IPK #2980B9
+
+note over HMI, IPK #F9E79F: The actuall implemented module names would be different, which depends on the actual implemented architecture.
+
+activate HMI #gold
+activate userSetting #gold
+activate CAF #gold
+activate jarvis #gold
+activate mapApp #gold
+activate ipkApp #gold
+activate ipkMap #gold
+# activate DB #gold
+activate carService #gold
+activate IPK #2980B9
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle & User selected any IPK mapping==#lightblue
+
+userSetting->CAF: async subscribe(DayNightThemeSetting)
+jarvis->CAF: async subscribe(theme_switch_type)
+jarvis->CAF: async subscribe(DayNightThemeSetting)
+mapApp->CAF: async subscribe(DayNightThemeSetting)
+ipkApp->CAF: async subscribe(DayNightThemeSetting)
+
+group #gold userSetDayNightTheme [User selects day or night theme on HMI, except auto option.]
+
+user->HMI: select(theme_switch_type)
+HMI->userSetting: dispatch(theme_switch_type)
+userSetting->CAF: dispatch(theme_switch_type)
+CAF->jarvis: async dispatch(theme_switch_type)
+userSetting->userSetting: async DayNightThemeSetting = (theme_switch_type == auto ? DayNightThemeSetting : theme_switch_type)
+userSetting->CAF: dispatch(DayNightThemeSetting)
+CAF->jarvis: async dispatch(DayNightThemeSetting)
+CAF->mapApp: async dispatch(DayNightThemeSetting)
+CAF->ipkApp: async dispatch(DayNightThemeSetting)
+
+entryspacing 2
+
+mapApp->HMI: async updateXML
+mapApp->mapApp: async updateTX
+ipkApp->HMI: async updateXML
+ipkApp->ipkApp: async updateTX
+ipkApp->carService: send(FICMDayNightMd, DayNightThemeSetting)
+carService->IPK: FICMDayNightMd
+
+#userSetDayNightTheme
+end
+
+
+group #gold autoChangeDayNightTheme [jarvis triggers current day-night theme while theme_switch_type == "auto"]
+
+jarvis->jarvis: onChangeDayNightTheme
+jarvis->CAF: dispatch(DayNightThemeSetting)
+
+CAF->userSetting: async dispatch(DayNightThemeSetting)
+CAF->mapApp: async dispatch(DayNightThemeSetting)
+CAF->ipkApp: async dispatch(DayNightThemeSetting)
+
+entryspacing 2
+
+mapApp->HMI: async updateXML
+mapApp->mapApp: async updateTX
+ipkApp->HMI: async updateXML
+ipkApp->ipkApp: async updateTX
+ipkApp->carService: send(FICMDayNightMd, DayNightThemeSetting)
+carService->IPK: FICMDayNightMd
+
+#autoChangeDayNightTheme
+end 
+
+group #6495ED TobeDisucssed - userSetting sending msg to carService insetad of ipkApp
+note over userSetting, IPK #lightblue: New IPK-synchronization solution: userSetting send DayNightThemeSetting value carService to once it detects on change of DayNightThemeSetting.
+userSetting->userSetting: onChangeDayNightThemeSetting
+userSetting->carService: send(FICMDayNightMd, DayNightThemeSetting)
+carService->IPK: FICMDayNightMd
+
+end 

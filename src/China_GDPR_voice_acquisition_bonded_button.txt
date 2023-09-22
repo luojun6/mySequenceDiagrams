@@ -1,0 +1,61 @@
+title China_GDPR_voice_acquisition_bonded_button
+
+
+actor #6495ED "user" as user
+boundary "HMI" as HMI #gold
+control "PrivacyService" as Privacy #gold
+boundary "CarService" as CarService #gold
+boundary "AdasController" as ADAS #2980B9
+
+activate user #6495ED
+activate HMI #gold
+activate Privacy #gold
+activate CarService #gold
+activate ADAS #2980B9
+
+note over Privacy#F9E79F: The actuall implemented service name is different.
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+
+ADAS-#2980B9>CarService: <color: #2980B9>**CCSpdlVcCmdSwReqDspCmd(0x01)**</color>
+HMI->Privacy: register(AdasAccVoiceControlButton)
+HMI->CarService: getStatus(AdasAccVoiceControlButton)
+CarService-->HMI:return AdasAccVoiceControlButton(False)
+HMI->HMI: reset(AdasAccVoiceControlButton)
+
+note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "disabled"
+
+==Head Unit System has completed initialization==#gold
+
+
+group #gold VoiceAcquisitionNotAuthorized [User does not grant the access to microphone for voice acquisition]
+
+user->HMI: set(AdasAccVoiceControlButton)
+HMI->Privacy: dispatch
+Privacy->HMI: popup(VoiceAcquisitionAllowenceRequest)
+Privacy-->HMI: return
+
+#VoiceAcquisitionNotAuthorized
+end 
+
+
+group #2980B9 VoiceAcquisitionAuthorized [User has granted the access to microphone for voice acquisition]
+
+user->HMI: set(AdasAccVoiceControlButton)
+HMI->Privacy: dispatch
+Privacy-->HMI: return next
+HMI->HMI: async set(AdasAccVoiceControlButton)
+HMI->CarService: async dispatch
+CarService-#2980B9>ADAS: <color: #2980B9>**CCSpdlVcCmdSwReq(0x02)**</color>
+HMI->HMI: async startResetTimer(AdasAccVoiceControlButton)
+ADAS-#2980B9>CarService: <color: #2980B9>**CCSpdlVcCmdSwReqDspCmd(0x02)**</color>
+CarService-->HMI: return AdasAccVoiceControlButton(True)
+HMI->HMI: clearResetTimer(AdasAccVoiceControlButton)
+#VoiceAcquisitionNotAuthorized
+end 
+
+note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "enabled"
+
+
+
+
