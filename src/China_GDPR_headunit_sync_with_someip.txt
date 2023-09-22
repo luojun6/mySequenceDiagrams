@@ -1,21 +1,23 @@
-title China_GDPR_headunit_sync_with_OEM_TSP v1.2
+title China_GDPR_headunit_sync_with_Someip v1.0
 
 actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
 # control UserSetting #gold
 control "PrivacyService" as Privacy #gold
 entity "SqliteDB" as DB #gold
-boundary ClientGateway #gold
-boundary "OEM_TSP" as TSP #2980B9
+control "Someip-InfoUpdateFromICM" as Someip #gold
 
-note over HMI, ClientGateway #F9E79F: The actuall implemented service name is different.
+boundary "VehicleEthernet" as VehEth #2980B9
+
+note over HMI, Someip #F9E79F: The actuall implemented service names might be different due to the actual implementation OS.
 
 activate user #6495ED
 activate HMI #gold
 # activate UserSetting #gold
 activate Privacy #gold
 activate DB #gold
-activate ClientGateway #gold
+# activate Someip #gold
+activate VehEth #2980B9
 
 
 ==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
@@ -26,6 +28,13 @@ Privacy->DB: get("currentLoginUser")
 DB-->Privacy: return userID
 Privacy->DB: get(userID, "PrivateAuth")
 DB-->Privacy: return PrivateAuth
+
+Privacy->Someip: activate
+activate Someip #gold
+Someip->VehEth: offerService()
+Someip<-->VehEth: someip handshake
+Someip->VehEth: cyclic_10s event()
+note over Someip, VehEth #F9E79F: Publish to vehicle ethernet with 10s period
 
 alt #A93226 0 == PrivateAuth.PrivateSwSts
 Privacy->Privacy: break
@@ -58,11 +67,13 @@ end
 Privacy->DB: async set("PrivateAuth", PrivateAuth)
 
 DB-->Privacy: return success
-Privacy->ClientGateway: async post(PrivateAuth)
-ClientGateway->TSP: async https.post(PrivateAuth)
-activate TSP #2980B9
-TSP-->ClientGateway: https.response(202)
-deactivate TSP
+Privacy->Someip: async post(PrivateAuth)
+Someip->VehEth: event()
+note over Someip, VehEth #F9E79F: OnChange event publish
+
+Someip->VehEth: cyclic_10s event()
+note over Someip, VehEth #F9E79F: Publish to vehicle ethernet with 10s period
+
 
 # PrivacyClaimPopup
 end 
@@ -74,11 +85,11 @@ user->HMI: modify PrivacySetting
 HMI->Privacy: async dispatch
 Privacy->DB: async set("PrivateAuth", PrivateAuth)
 DB-->Privacy: return success
-Privacy->ClientGateway: async post(PrivateAuth)
-ClientGateway->TSP: async https.post(PrivateAuth)
-activate TSP #2980B9
-TSP-->ClientGateway: https.response(202)
-deactivate TSP
+Privacy->Someip: async post(PrivateAuth)
+Someip->VehEth: async https.post(PrivateAuth)
+
+VehEth-->Someip: https.response(202)
+
 
 # PrivacySettingChanged
 end
@@ -86,11 +97,11 @@ end
 group #gold UnhappyPathFailedToSync [Headunit failed to sync with cloud]
 
 loop #red FailedToSync [retryCount < 3]
-Privacy->ClientGateway: async post(PrivateAuth)
-ClientGateway->TSP: async https.post(PrivateAuth)
-TSP-->ClientGateway: response(400/404) or timeout
+Privacy->Someip: async post(PrivateAuth)
+Someip->VehEth: async https.post(PrivateAuth)
+VehEth-->Someip: response(400/404) or timeout
 end
-ClientGateway->DB: set("PrivateAuthSync" false)
+Someip->DB: set("PrivateAuthSync" false)
 
 ==HeadUnit initialization in next powerup cycle==#gold
 
@@ -99,11 +110,11 @@ Privacy->DB: async get("PrivateAuthSync")
 DB-->Privacy: return false
 
 loop #red FailedToSync [retryCount < 3]
-Privacy->ClientGateway: async post(PrivateAuth)
-ClientGateway->TSP: async https.post(PrivateAuth)
-TSP-->ClientGateway: response(400/404) or timeout
+Privacy->Someip: async post(PrivateAuth)
+Someip->VehEth: async https.post(PrivateAuth)
+VehEth-->Someip: response(400/404) or timeout
 end
-ClientGateway->DB: set("PrivateAuthSync" false)
+Someip->DB: set("PrivateAuthSync" false)
 
 #UnhappyPathFailedToSync
 end 

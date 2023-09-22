@@ -49,9 +49,9 @@ CAF->ipkApp: async dispatch(DayNightThemeSetting)
 entryspacing 2
 
 mapApp->HMI: async updateXML
-mapApp->mapApp: async updateTX
+mapApp->mapApp: async updateTS
 ipkApp->HMI: async updateXML
-ipkApp->ipkApp: async updateTX
+ipkApp->ipkApp: async updateTS
 ipkApp->carService: send(FICMDayNightMd, DayNightThemeSetting)
 carService->IPK: FICMDayNightMd
 
@@ -71,9 +71,9 @@ CAF->ipkApp: async dispatch(DayNightThemeSetting)
 entryspacing 2
 
 mapApp->HMI: async updateXML
-mapApp->mapApp: async updateTX
+mapApp->mapApp: async updateTS
 ipkApp->HMI: async updateXML
-ipkApp->ipkApp: async updateTX
+ipkApp->ipkApp: async updateTS
 ipkApp->carService: send(FICMDayNightMd, DayNightThemeSetting)
 carService->IPK: FICMDayNightMd
 
@@ -81,7 +81,7 @@ carService->IPK: FICMDayNightMd
 end 
 
 group #6495ED TobeDisucssed - userSetting sending msg to carService insetad of ipkApp
-note over userSetting, IPK #lightblue: New IPK-synchronization solution: userSetting send DayNightThemeSetting value carService to once it detects on change of DayNightThemeSetting.
+note over userSetting, IPK #lightblue: New IPK-synchronization solution: userSetting send DayNightThemeSetting value to carService once it detects on change of DayNightThemeSetting. And ipkApp will not send DayNightThemeSetting value to carService any more.
 userSetting->userSetting: onChangeDayNightThemeSetting
 userSetting->carService: send(FICMDayNightMd, DayNightThemeSetting)
 carService->IPK: FICMDayNightMd
