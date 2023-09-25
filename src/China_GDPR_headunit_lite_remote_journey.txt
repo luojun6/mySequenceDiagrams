@@ -1,0 +1,58 @@
+title China_GDPR_headunit_lite_remote_journey_v1.0
+
+participantgroup #lightyellow **Application Processor**
+
+control "PrivacyService" as Privacy #gold
+control TBOXService #gold
+
+# participantgroup #lightyellow **Application Processor**
+end 
+
+participantgroup #lightblue **4G Modem**
+
+boundary GPSTranciver #2980B9
+control AVNService #2980B9
+control BaseService #2980B9
+control TspService #2980B9
+
+# participantgroup #lightblue **4G Modem**
+end 
+
+boundary TSP #A93226
+
+activate Privacy #gold
+activate TBOXService #gold
+activate GPSTranciver #2980B9
+activate AVNService #2980B9
+activate BaseService #2980B9
+activate TspService #2980B9
+
+==Kernel intialization completed==#lightgray
+
+TBOXService<:4--GPSTranciver: GPSHal(NEMA)\n					via ttyusb \n				continously
+
+TBOXService->Privacy: get(PrivateAuth)
+Privacy-->TBOXService: PrivateAuth
+TBOXService->Privacy: subscribe(PrivateAuth)
+
+loop #A93226 true
+
+alt #gold (1 == PrivateAuth.PosAuthSts) or (2 == PrivateAuth.PosAuthSts) User granted the access to the vehicle position data
+
+TBOXService->AVNService: dispatch(gpsData = GPSHal(NEMA))
+
+else (0 == PrivateAuth.PosAuthSts) or (PrivateAuth.PosAuthSts > 2) User disgranted the access to the vehicle position data
+
+TBOXService->AVNService: dispatch(gpsData.fillAllZeros())
+
+
+# PrivateAuth.PosAuthSts arbitration
+end
+
+AVNService->BaseService: dispatch(gpsData)
+BaseService->BaseService: convergeRemoteJourneyData()
+BaseService->TspService: dispatch(remoteJourneyData)
+TspService->TSP: https.post(remoteJourneyData)
+
+#loop
+end

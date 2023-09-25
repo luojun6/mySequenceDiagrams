@@ -1,0 +1,143 @@
+title China_GDPR_headunit_sync_with_USB v1.0
+
+actor #6495ED "user" as user
+boundary "HMI" as HMI #gold
+# control UserSetting #gold
+control "PrivacyService" as Privacy #gold
+entity "SqliteDB" as DB #gold
+control TBOXService #gold
+
+boundary "TBOX - DataProvider" as TBOX #2980B9
+
+note over HMI, TBOXService #F9E79F: The actuall implemented service names might be different due to the actual implementation OS.
+
+activate user #6495ED
+activate HMI #gold
+# activate UserSetting #gold
+activate Privacy #gold
+activate DB #gold
+# activate TBOXService #gold
+activate TBOX #2980B9
+
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+
+
+group #gold PrivacyClaimPopup [Occurrs post activation process or head unit s/w fota upgraded]
+Privacy->DB: get("currentLoginUser")
+DB-->Privacy: return userID
+Privacy->DB: get(userID, "PrivateAuth")
+DB-->Privacy: return PrivateAuth
+
+Privacy->TBOXService: activate
+activate TBOXService #gold
+
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOXService: timer_10s()
+
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+
+note over TBOXService, TBOX #F9E79F: Publish to TBOX with 10s period
+
+alt #A93226 0 == PrivateAuth.PrivateSwSts
+Privacy->Privacy: break
+else 1 == PrivateAuth.PrivateSwSts 
+note over HMI, Privacy #F9E79F: There will be a popup if user never agree or factory reset.
+Privacy->HMI: popup(PrivacyClaim)
+
+
+alt #6495ED "disagreed" == PrivacyClaim.result
+user->HMI: click("disagreed")
+HMI-->Privacy: return PrivacyClaim.result
+Privacy->Privacy: break
+else "agreed" == PrivacyClaim.result
+user->HMI: click("agreed")
+HMI-->Privacy: return PrivacyClaim.result
+Privacy->Privacy: update(PrivateAuth.PrivateSwSts)
+Privacy->HMI: popup(PrivacyAuthSetting)
+note over user, Privacy #lightblue: PrivacyAuthSetting includes: microphone, camera and position
+user->HMI: Complete PrivacyAuthSetting and click [next]
+HMI-->Privacy: return PrivacyAuthSetting
+Privacy->Privacy: update(PrivateAuth.PosAuthSts)
+Privacy->Privacy: break
+#PrivacyClaim
+end
+
+# PrivateAuth.PrivateSwSts
+end
+
+
+Privacy->DB: async set("PrivateAuth", PrivateAuth)
+
+DB-->Privacy: return success
+Privacy->TBOXService: async post(PrivateAuth)
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOXService: timer_10s()
+
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+
+
+# PrivacyClaimPopup
+end 
+
+
+group #gold OnChangePrivacySetting  [User modifies the privacy setting on HMI]
+
+user->HMI: modify PrivacySetting
+HMI->Privacy: async dispatch
+Privacy->DB: async set("PrivateAuth", PrivateAuth)
+DB-->Privacy: return success
+Privacy->TBOXService: async post(PrivateAuth)
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOXService: timer_10s()
+
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+
+TBOXService->TBOX: cyclic_10s event()
+note over TBOXService, TBOX #F9E79F: Publish to vehicle ethernet with 10s period
+
+# PrivacySettingChanged
+end
+
+group #gold UnhappyPathFailedToSync [Headunit failed to sync with TBOX]
+
+loop #red FailedToSync [retryCount < 3]
+Privacy->TBOXService: async post(PrivateAuth)
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService-->TBOXService: Req(0x0202: timeout
+end
+TBOXService->DB: set("PrivateAuthSync" false)
+
+==HeadUnit initialization in next powerup cycle==#gold
+
+alt #6495ED PrivateAuthSync == false
+Privacy->DB: async get("PrivateAuthSync")
+DB-->Privacy: return false
+
+loop #red FailedToSync [retryCount < 3]
+Privacy->TBOXService: async post(PrivateAuth)
+TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
+TBOXService-->TBOXService: Req(0x0202: timeout
+end
+end
+TBOXService->DB: set("PrivateAuthSync" false)
+
+# PowerUpSync
+end 
+#UnhappyPathFailedToSync
+end 
+
+
+
+
+
+
+
+
+

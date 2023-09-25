@@ -86,41 +86,16 @@ HMI->Privacy: async dispatch
 Privacy->DB: async set("PrivateAuth", PrivateAuth)
 DB-->Privacy: return success
 Privacy->Someip: async post(PrivateAuth)
-Someip->VehEth: async https.post(PrivateAuth)
+Someip->VehEth: event()
+note over Someip, VehEth #F9E79F: OnChange event publish
 
-VehEth-->Someip: https.response(202)
-
+Someip->VehEth: cyclic_10s event()
+note over Someip, VehEth #F9E79F: Publish to vehicle ethernet with 10s period
 
 # PrivacySettingChanged
 end
 
-group #gold UnhappyPathFailedToSync [Headunit failed to sync with cloud]
 
-loop #red FailedToSync [retryCount < 3]
-Privacy->Someip: async post(PrivateAuth)
-Someip->VehEth: async https.post(PrivateAuth)
-VehEth-->Someip: response(400/404) or timeout
-end
-Someip->DB: set("PrivateAuthSync" false)
-
-==HeadUnit initialization in next powerup cycle==#gold
-
-alt #6495ED PrivateAuthSync == false
-Privacy->DB: async get("PrivateAuthSync")
-DB-->Privacy: return false
-
-loop #red FailedToSync [retryCount < 3]
-Privacy->Someip: async post(PrivateAuth)
-Someip->VehEth: async https.post(PrivateAuth)
-VehEth-->Someip: response(400/404) or timeout
-end
-Someip->DB: set("PrivateAuthSync" false)
-
-#UnhappyPathFailedToSync
-end 
-
-# PowerUpSync
-end 
 
 
 
