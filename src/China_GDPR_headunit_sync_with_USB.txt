@@ -4,7 +4,7 @@ actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
 # control UserSetting #gold
 control "PrivacyService" as Privacy #gold
-entity "SqliteDB" as DB #gold
+database "SqliteDB" as DB #gold
 control TBOXService #gold
 
 boundary "TBOX - DataProvider" as TBOX #2980B9

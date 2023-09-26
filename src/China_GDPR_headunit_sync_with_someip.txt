@@ -4,7 +4,7 @@ actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
 # control UserSetting #gold
 control "PrivacyService" as Privacy #gold
-entity "SqliteDB" as DB #gold
+database "SqliteDB" as DB #gold
 control "Someip-InfoUpdateFromICM" as Someip #gold
 
 boundary "VehicleEthernet" as VehEth #2980B9

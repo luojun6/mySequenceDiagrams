@@ -1,4 +1,4 @@
-title China_GDPR_headunit_dms_camera_privacy_management v1.0
+title China_GDPR_headunit_dms_camera v1.0
 
 Alice->Bob:Click and drag to create a request or\ntype it in the source area to the left
 Alice<--Bob:drag to move
