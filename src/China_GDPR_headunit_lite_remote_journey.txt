@@ -52,7 +52,7 @@ end
 AVNService->BaseService: dispatch(gpsData)
 BaseService->BaseService: convergeRemoteJourneyData()
 BaseService->TspService: dispatch(remoteJourneyData)
-TspService->TSP: https.post(remoteJourneyData)
+TspService->TSP: udp(remoteJourneyData)
 
 #loop
 end

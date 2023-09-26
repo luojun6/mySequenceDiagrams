@@ -1,4 +1,4 @@
-title Head Unit System Shutdown Process
+title Head Unit System Shutdown Process v1.1
 
 boundary #blue "Vehicle CAN Network" as vehicle
 control "MCU CAN/LIN Network" as MCU_NM #6495ED
@@ -134,7 +134,9 @@ activate MCU_NM #gray
 vehicle->MCU_NM: [CAN]CAN_NM = start
 vehicle->MCU_NM: [CAN]CAN_NM = normal
 
-group #red Banma New Shutdown Process Regarding to Vehicle CAN Network Wakeup during ULLY_POWER_OFF_TIMER_20S
+note over vehicle, FCD #F9E79F: Version 1.1: Modified the process regarding to the 20s timer period, for the purpose to fix the problem of non-simutaneously [STANDBY-SLEEP]scenario between MCU and SoC.
+
+group #red Banma New Shutdown Process Regarding to Vehicle CAN Network Wakeup during FULLY_POWER_OFF_TIMER_20S
 MCU_NM->MCU_PWM: Set [MCU_NM_WAKEUP_FLAG] true
 
 deactivate MCU_NM 

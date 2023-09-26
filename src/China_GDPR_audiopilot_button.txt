@@ -1,38 +1,36 @@
-title China_GDPR_voice_acquisition_bonded_button_v1.2
-
+title China_GDPR_audiopilot_button_v1.0
 
 actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
 control "PrivacyService" as Privacy #gold
 boundary "CarService" as CarService #gold
-boundary "AdasController" as ADAS #2980B9
+boundary "ExternalAMP" as AMP #2980B9
 
 activate user #6495ED
 activate HMI #gold
 activate Privacy #gold
 activate CarService #gold
-activate ADAS #2980B9
+activate AMP #2980B9
 
 note over HMI, CarService#F9E79F: The actuall implementation service names would be different.
 
-note over user, ADAS#F9E79F: Version 1.0: Initial drafted to complete the scenarios of normal VoiceAcquisitionNotAuthorized and VoiceAcquisitionAuthorized.
 
 ==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
 
-ADAS-#2980B9>CarService: <color: #2980B9>**CCSpdlVcCmdSwReqDspCmd(0x01)**</color>
-HMI->Privacy: register(AdasAccVoiceControlButton)
-HMI->CarService: getStatus(AdasAccVoiceControlButton)
-CarService-->HMI:return AdasAccVoiceControlButton(False)
-HMI->HMI: reset(AdasAccVoiceControlButton)
+AMP-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x00)**</color>
+HMI->Privacy: register(AudiopilotButton)
+HMI->CarService: getStatus(AudiopilotButton)
+CarService-->HMI:return AudiopilotButton(False)
+HMI->HMI: reset(AudiopilotButton)
 
-note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "disabled"
+note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "disabled"
 
 ==Head Unit System has completed initialization==#gold
 
 
 group #gold VoiceAcquisitionNotAuthorized [User does not grant the access to microphone for voice acquisition]
 
-user->HMI: set(AdasAccVoiceControlButton)
+user->HMI: set(AudiopilotButton)
 HMI->Privacy: dispatch
 Privacy->HMI: popup(VoiceAcquisitionAllowenceRequest)
 activate Privacy #gold
@@ -47,25 +45,24 @@ end
 
 group #2980B9 VoiceAcquisitionAuthorized [User has granted the access to microphone for voice acquisition]
 
-user->HMI: set(AdasAccVoiceControlButton)
+user->HMI: set(AudiopilotButton)
 HMI->Privacy: dispatch
 Privacy-->HMI: return next
-HMI->HMI: async set(AdasAccVoiceControlButton)
+HMI->HMI: async set(AudiopilotButton)
 HMI->CarService: async dispatch
-CarService-#2980B9>ADAS: <color: #2980B9>**CCSpdlVcCmdSwReq(0x02)**</color>
-HMI->HMI: async startResetTimer(AdasAccVoiceControlButton)
-ADAS-#2980B9>CarService: <color: #2980B9>**CCSpdlVcCmdSwReqDspCmd(0x02)**</color>
-CarService-->HMI: return AdasAccVoiceControlButton(True)
-HMI->HMI: clearResetTimer(AdasAccVoiceControlButton)
+CarService-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+HMI->HMI: async startResetTimer(AudiopilotButton)
+AMP-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
+CarService-->HMI: return AudiopilotButton(True)
+HMI->HMI: clearResetTimer(AudiopilotButton)
 #VoiceAcquisitionNotAuthorized
 end 
 entryspacing 0
-note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "enabled"
+note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "enabled". Please be noticed that the default AutoVolmCmpstnFdbk value is 0x01 (ON). 
 
 entryspacing 3
 
 
-note over user, ADAS #F9E79F: Version 1.1: Added in 2023-09-25 to complete the "auto-disable" scenarios with the benchmarks of Xipeng P7.
 
 entryspacing 1
 group #gold VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized [User selected NotAutorized from Authorized on HMI]
@@ -79,22 +76,22 @@ Privacy->HMI: async reset(InternalVoiceAcquisitionButtonA)
 HMI-->Privacy: return success
 Privacy->HMI: async reset(InternalVoiceAcquisitionButtonB)
 HMI-->Privacy: return success
-Privacy->HMI: async reset(AdasAccVoiceControlButton)
+Privacy->HMI: async reset(AudiopilotButton)
 HMI->CarService: async dispatch
-CarService-#A93226>ADAS: <color: #A93226>**CCSpdlVcCmdSwReq(0x01)**</color>
-ADAS-#A93226>CarService: <color: #A93226>**CCSpdlVcCmdSwReqDspCmd(0x01)**</color>
-CarService-->HMI: return AdasAccVoiceControlButton(False)
+CarService-#A93226>AMP: <color: #A93226>**AutoVolmCmpstnSoftSw(0x00)**</color>
+AMP-#A93226>CarService: <color: #A93226>**AutoVolmCmpstnFdbk(0x00)**</color>
+CarService-->HMI: return AudiopilotButton(False)
 
 deactivate Privacy
 
 # VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
 end
 entryspacing 0
-note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "disabled"
+note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "disabled"
 
 entryspacing 3
 
-note over user, ADAS #F9E79F: Version 1.2: Added in 2023-09-26 to complete the "auto-enable" scenarios with the benchmarks of Xipeng P7.
+
 
 entryspacing 1
 group #2980B9 VoiceAcquisitionNotAuthorized -> VoiceAcquisitionAuthorized [User selected Autorized from NotAuthorized on HMI]
@@ -108,19 +105,15 @@ Privacy->HMI: async set(InternalVoiceAcquisitionButtonA)
 HMI-->Privacy: return success
 Privacy->HMI: async set(InternalVoiceAcquisitionButtonB)
 HMI-->Privacy: return success
-Privacy->HMI: async set(AdasAccVoiceControlButton)
+Privacy->HMI: async set(AudiopilotButton)
 HMI->CarService: async dispatch
-CarService-#2980B9>ADAS: <color: #2980B9>**CCSpdlVcCmdSwReq(0x02)**</color>
-ADAS-#2980B9>CarService: <color: #2980B9>**CCSpdlVcCmdSwReqDspCmd(0x02)**</color>
-CarService-->HMI: return AdasAccVoiceControlButton(True)
+CarService-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+AMP-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
+CarService-->HMI: return AudiopilotButton(True)
 
 deactivate Privacy
 
 # VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
 end
 entryspacing 0
-note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "enabled"
-
-
-
-
+note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "enabled"
