@@ -1,4 +1,4 @@
-title China_GDPR_audiopilot_button_v1.0
+title China_GDPR_audiopilot_button_v1.1
 
 actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
@@ -13,7 +13,7 @@ activate user #6495ED
 activate MCU #3498DB
 activate AMP #2980B9
 
-
+note over user, AMP#F9E79F: Version 1.1 Corrected for the storage mechanism: OS stores the [AudioPilotButton] status in SqliteDB.
 
 note over HMI, CarService#F9E79F: The actuall implementation service names would be different.
 
