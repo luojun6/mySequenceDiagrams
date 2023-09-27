@@ -130,8 +130,6 @@ TBOXService->DB: set("PrivateAuthSync" false)
 
 # PowerUpSync
 end 
-#UnhappyPathFailedToSync
-end 
 
 
 

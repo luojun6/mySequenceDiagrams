@@ -109,6 +109,9 @@ HMI-->Privacy: return success
 Privacy->HMI: async set(InternalVoiceAcquisitionButtonB)
 HMI-->Privacy: return success
 Privacy->HMI: async set(AdasAccVoiceControlButton)
+
+note over HMI, ADAS #lightblue: Per the requirement from ADAS team, the AdasAccVoiceControlButton should be set as defualt value as "enabled".
+
 HMI->CarService: async dispatch
 CarService-#2980B9>ADAS: <color: #2980B9>**CCSpdlVcCmdSwReq(0x02)**</color>
 ADAS-#2980B9>CarService: <color: #2980B9>**CCSpdlVcCmdSwReqDspCmd(0x02)**</color>

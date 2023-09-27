@@ -4,36 +4,41 @@ actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
 control "PrivacyService" as Privacy #gold
 control AMPService #gold
-database "SqliteDB" as DB #gold
+
 boundary "CarService" as CarService #gold
-boundary "ExternalAMP" as AMP #2980B9
+entity MCU #3498DB
+entity AMP #2980B9
 
 activate user #6495ED
-activate HMI #gold
-activate Privacy #gold
-activate AMPService #gold
-activate DB #gold
-activate CarService #gold
+activate MCU #3498DB
 activate AMP #2980B9
+
+
 
 note over HMI, CarService#F9E79F: The actuall implementation service names would be different.
 
 
 ==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
 
-note over user, AMP #lightblue: Default AudiopilotButton is displaying with status as "disabled"
-linear
-AMPService<-#2980B9:4>CarService: <color: #2980B9>**Handshake**</color>
-CarService<-#2980B9:4>AMP: <color: #2980B9>**Handshake via CAN Messages**</color>
-linear off
+MCU<-#2980B9:4>AMP: <color: #2980B9>**Handshake via CAN Messages**</color>
 
-AMPService->DB: get("AudiopilotButton")
-DB-->AMPService: return AudiopilotButton
-AMPService->CarService: dispatch
+note over MCU #lightblue: MCU stores the last AutoVolmCmpstnFdbk value in NVM
+MCU-#2980B9>MCU: <color: #2980B9>**getFromNvm(AutoVolmCmpstnSoftSw)**</color>
 
-CarService-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x00)**</color>
+MCU-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x00)**</color>
+MCU<#2980B9-AMP: <color: #2980B9>**AutoVolmCmpstnFdbk(0x00)**</color>
 
-AMP-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x00)**</color>
+
+note over user, MCU #lightblue: Default AudiopilotButton is displaying with status as "disabled"
+
+activate HMI #gold
+activate Privacy #gold
+activate AMPService #gold
+activate CarService #gold
+
+AMPService->CarService: get(AutoVolmCmpstnFdbk)
+
+MCU-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x00)**</color>
 
 note over AMPService, CarService #F9E79F: No value change, no onChangecallback 
 HMI->Privacy: register(AudiopilotButton)
@@ -41,7 +46,7 @@ HMI->CarService: getStatus(AudiopilotButton)
 CarService-->HMI:return AudiopilotButton(False)
 AMPService->Privacy: register(AuthPrivate.micStatus)
 HMI->HMI: reset(AudiopilotButton)
-note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "disabled"
+note over user, MCU #lightblue: Now AudiopilotButton has been displaying with status as "disabled"
 
 
 ==Head Unit System has completed initialization==#gold
@@ -70,19 +75,20 @@ Privacy-->HMI: return next
 HMI->HMI: async set(AudiopilotButton)
 HMI->AMPService: async dispatch
 AMPService->CarService: async dispatch
-CarService-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+CarService-#2980B9>MCU: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+MCU-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+MCU<#2980B9-AMP: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
 HMI->HMI: async startResetTimer(AudiopilotButton)
-AMP-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
- note leftof # AMP:
+MCU-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
 
 CarService->AMPService: async dispatch
 AMPService-->HMI: return AudiopilotButton(True)
-AMPService->DB: set("AudiopilotButton", AudiopilotButton)
+
 HMI->HMI: clearResetTimer(AudiopilotButton)
 #VoiceAcquisitionNotAuthorized
 end 
 entryspacing 0
-note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "enabled". Please be noticed that the default AutoVolmCmpstnFdbk value is 0x01 (ON). 
+note over user, MCU #lightblue: Now AudiopilotButton has been displaying with status as "enabled". Please be noticed that the default AutoVolmCmpstnFdbk value is 0x01 (ON). 
 
 entryspacing 3
 
@@ -93,6 +99,11 @@ group #gold VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized [User se
 
 user->HMI: set(VoiceAcquisitionNotAuthorized)
 HMI->Privacy: dispatch
+
+Privacy->AMPService: notify(PrivateAuth.micStatus)
+
+note over HMI, CarService #lightblue: Disabling "VoiceAcquisition" related buttons could be implemented by application themselves, which depends on actual archicture design.
+
 Privacy->Privacy: disableAllVoiceAcquisitionButtons()
 activate Privacy #gold
 
@@ -104,46 +115,58 @@ Privacy->HMI: async reset(AudiopilotButton)
 HMI->AMPService: async dispatch
 AMPService->CarService: async dispatch
 
-CarService-#A93226>AMP: <color: #A93226>**AutoVolmCmpstnSoftSw(0x00)**</color>
-AMP-#A93226>CarService: <color: #A93226>**AutoVolmCmpstnFdbk(0x00)**</color>
+CarService-#2980B9>MCU: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x00)**</color>
+MCU-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x00)**</color>
+MCU<#2980B9-AMP: <color: #2980B9>**AutoVolmCmpstnFdbk(0x00)**</color>
+MCU-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x00)**</color>
 CarService-->HMI: return AudiopilotButton(False)
-:
-AMPService->DB: 
+
 
 deactivate Privacy
 
 # VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
 end
 entryspacing 0
-note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "disabled"
+note over user, MCU #lightblue: Now AudiopilotButton has been displaying with status as "disabled".
 
 entryspacing 3
 
 
 
 entryspacing 1
-group #2980B9 VoiceAcquisitionNotAuthorized -> VoiceAcquisitionAuthorized [User selected Autorized from NotAuthorized on HMI]
+group #A93226 VoiceAcquisitionNotAuthorized -> VoiceAcquisitionAuthorized [User selected Autorized from NotAuthorized on HMI]
 
 user->HMI: set(VoiceAcquisitionAuthorized)
 HMI->Privacy: dispatch
 activate Privacy #gold
 
 Privacy->HMI: async set(InternalVoiceAcquisitionButtonA)
-Privacy->Privacy:enableAllVoiceAcquisitionButtons()
+#Privacy->Privacy:enableAllVoiceAcquisitionButtons()
+
 HMI-->Privacy: return success
 Privacy->HMI: async set(InternalVoiceAcquisitionButtonB)
 HMI-->Privacy: return success
-Privacy->HMI: async set(AudiopilotButton)
-HMI->CarService: async dispatch
-CarService-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
-AMP-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
-CarService-->HMI: return AudiopilotButton(True)
+
+
+#Privacy->HMI: async set(AudiopilotButton)
+#HMI->CarService: async dispatch
+#CarService-#2980B9>MCU: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+
+#MCU-#2980B9>AMP: <color: #2980B9>**AutoVolmCmpstnSoftSw(0x01)**</color>
+#MCU<#2980B9-AMP: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
+
+#MCU-#2980B9>CarService: <color: #2980B9>**AutoVolmCmpstnFdbk(0x01)**</color>
+# CarService-->HMI: return AudiopilotButton(True)
 
 deactivate Privacy
 
+note over HMI, MCU #E6B0AA: There is a big difference between [AudiopilotButton] and other "VoiceAcquisition" related buttons is that the default AudiopilotButton's status is disabled.
+
 # VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
 end
+
+
 entryspacing 0
-note over user, AMP #lightblue: Now AudiopilotButton has been displaying with status as "enabled"
+note over user, MCU #lightblue: Now AudiopilotButton has been displaying with status as "disabled".
 
 
