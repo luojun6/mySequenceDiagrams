@@ -1,15 +1,17 @@
-title China_GDPR_voice_acquisition_bonded_button_v1.2
+title China_GDPR_voice_acquisition_bonded_button_v1.3
 
 
 actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
 control "PrivacyService" as Privacy #gold
+database "SqliteDB" as DB #gold
 boundary "CarService" as CarService #gold
 boundary "AdasController" as ADAS #2980B9
 
 activate user #6495ED
 activate HMI #gold
 activate Privacy #gold
+activate DB #gold
 activate CarService #gold
 activate ADAS #2980B9
 
@@ -68,10 +70,21 @@ entryspacing 3
 note over user, ADAS #F9E79F: Version 1.1: Added in 2023-09-25 to complete the "auto-disable" scenarios with the benchmarks of Xipeng P7.
 
 entryspacing 1
+
+note over user, ADAS #F9E79F: Version 1.3: Revised the "button status storage" mechanism to meet product requirements.
+
+
 group #gold VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized [User selected NotAutorized from Authorized on HMI]
 
 user->HMI: set(VoiceAcquisitionNotAuthorized)
 HMI->Privacy: dispatch
+
+note over HMI, CarService #lightblue: Disabling "VoiceAcquisition" related buttons could be implemented by application themselves, which depends on actual archicture design.
+
+Privacy->DB: storesAlloiceAcquisitionButtonsStatus()
+
+note over Privacy, DB #F9E79F: Privacy service only stores all buttons status in DB while user di-authorizes.
+
 Privacy->Privacy: disableAllVoiceAcquisitionButtons()
 activate Privacy #gold
 
@@ -101,8 +114,13 @@ group #2980B9 VoiceAcquisitionNotAuthorized -> VoiceAcquisitionAuthorized [User 
 
 user->HMI: set(VoiceAcquisitionAuthorized)
 HMI->Privacy: dispatch
-Privacy->Privacy: enableAllVoiceAcquisitionButtons()
 activate Privacy #gold
+Privacy->DB: async getAllVoiceAcquisitionButtons()
+
+DB-->Privacy: return {\n   InternalVoiceAcquisitionButtonA: true,  \n   InternalVoiceAcquisitionButtonB: false, \n   AdasAccVoiceControlButton: true\n}
+
+
+
 
 Privacy->HMI: async set(InternalVoiceAcquisitionButtonA)
 HMI-->Privacy: return success
@@ -110,7 +128,6 @@ Privacy->HMI: async set(InternalVoiceAcquisitionButtonB)
 HMI-->Privacy: return success
 Privacy->HMI: async set(AdasAccVoiceControlButton)
 
-note over HMI, ADAS #lightblue: Per the requirement from ADAS team, the AdasAccVoiceControlButton should be set as defualt value as "enabled".
 
 HMI->CarService: async dispatch
 CarService-#2980B9>ADAS: <color: #2980B9>**CCSpdlVcCmdSwReq(0x02)**</color>
@@ -122,8 +139,7 @@ deactivate Privacy
 # VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
 end
 entryspacing 0
-note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displaying with status as "enabled"
-
+note over user, MCU #lightblue: Now all voice acquisition buttons have been back in the status before user di-authorized.
 
 
 

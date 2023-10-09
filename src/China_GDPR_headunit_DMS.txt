@@ -1,0 +1,184 @@
+title China_GDPR_headunit_DMS_v1.0
+
+actor #6495ED "user" as user
+boundary "HMI" as HMI #gold
+# control UserSetting #gold
+control "PrivacyService" as Privacy #gold
+control "DMSService" as DMS #2980B9
+entity "DMSCameraFD" as camera #gold
+database "SqliteDB" as DB #gold
+boundary "CarService" as CarService #gold
+
+control "ADASController" as ADAS #2980B9
+
+note over HMI, ADAS #F9E79F: The actuall implemented service names might be different due to the actual implementation OS.
+
+note over DMS #lightblue: DMSService is delivered by the 3rd party \nand running in headunit OS 
+
+activate HMI #gold
+activate Privacy #gold
+activate DMS #2980B9
+activate camera #gold
+activate DB #gold
+activate CarService #gold
+activate ADAS #2980B9
+
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+
+note over HMI, ADAS #F9E79F: DMSService could not read the video stream from DMSCameraFD while user has not authorized the InVehicleCamera usage.
+
+DMS-#red:3xcamera: <color: #red>**videocapture**</color>
+camera--#red>DMS: <color: #red>onError -> \nVIDEOCAPTURE_STATUS_ERROR</color>
+
+ADAS-#2980B9>CarService: <color: #2980B9>**DMSSts(0x00)**</color>
+note over DMS, ADAS #lightblue: Headunit does not need to process DMSSts signal. Just notify that there would be no error here.
+
+DMS->DMS: start VIDEOCAPTURE_RETRY_TIMER_18s
+
+DMS-#red:3xcamera: <color: #red>**videocapture**</color>
+camera--#red>DMS: <color: #red>onError -> \nVIDEOCAPTURE_STATUS_ERROR</color>
+
+
+DMS->DMS: start VIDEOCAPTURE_RETRY_TIMER_18s
+
+note over DMS, ADAS#lightblue: DMSService retries every 18s.
+
+note over HMI, ADAS #lightblue: DMSSwitch default value is enabled from ADASController perspective.
+
+ADAS-#2980B9>CarService: <color: #2980B9>**DMSDspCmd(0x02)**</color>
+HMI->Privacy: get(InVehicleCamera)
+Privacy-->HMI: InVehicleCamera.NotAuthroized
+HMI->Privacy: register(InVehicleCamera)
+HMI->CarService: getStatus(DMSSwitch)
+CarService-->HMI:return DMSSwitch(True)
+HMI->HMI: async reset(DMSSwitch)
+HMI->CarService: async dispatch
+CarService-#2980B9>ADAS: <color: #2980B9>**DMSSwReq(0x01)**</color>
+ADAS-#2980B9>CarService: <color: #2980B9>**DMSDspCmd(0x01)**</color>
+
+note over HMI, ADAS #lightblue: Now DMSSwitch status is displaying as disable while user has not authorized the InVehicleCamera usage.
+
+==Head Unit System has completed initialization==#gold
+
+entryspacing 3
+
+group #gold InVehicleCameraNotAuthorized [User does not grant the access to InVehicleCamera]
+entryspacing 1
+user->HMI: set(DMSSwitch)
+HMI->Privacy: dispatch
+Privacy->HMI: popup(InVehicleCameraAllowenceRequest)
+activate Privacy #gold
+
+user->HMI: select [cancel]
+HMI-->Privacy: dispatch
+Privacy-->HMI: return
+deactivate Privacy
+#VoiceAcquisitionNotAuthorized
+end 
+
+entryspacing 3
+
+group #2980B9 InVehicleCamerauthorized [User has granted the access to InVehicleCamera]
+
+entryspacing 1
+DMS<-#2980B9:3>camera: <color: #2980B9>**videocapture**</color>
+
+user->HMI: set(DMSSwitch)
+HMI->Privacy: dispatch
+Privacy-->HMI: return next
+HMI->HMI: async set(DMSSwitch)
+HMI->CarService: async dispatch
+CarService-#2980B9>ADAS: <color: #2980B9>**DMSSwReq(0x02)**</color>
+HMI->HMI: async startResetTimer(DMSSwitch)
+ADAS-#2980B9>CarService: <color: #2980B9>**DMSDspCmd(0x02)**</color>
+CarService-->HMI: return DMSSwitch(True)
+HMI->HMI: clearResetTimer(DMSSwitch)
+
+#VoiceAcquisitionNotAuthorized
+end 
+entryspacing 0
+note over user, ADAS #lightblue: Now DMSSwitch has been displaying with status as "enabled"
+
+entryspacing 3
+
+
+
+group #gold InVehicleCameraAuthorized -> InVehicleCameraNotAuthorized [User selected NotAutorized from Authorized on HMI]
+
+entryspacing 1
+
+DMS<-#2980B9:3>camera: <color: #2980B9>**videocapture**</color>
+
+user->HMI: set(InVehicleCameraNotAuthorized)
+HMI->Privacy: dispatch
+
+DMS-#red:3xcamera: <color: #red>**videocapture**</color>
+camera--#red>DMS: <color: #red>onError -> \nVIDEOCAPTURE_STATUS_ERROR</color>
+DMS->DMS: start VIDEOCAPTURE_RETRY_TIMER_18s
+note over DMS, ADAS#lightblue: DMSService retries every 18s.
+
+
+note over HMI, CarService #lightblue: Disabling "AllInVehicleCameraButtons" could be implemented by application themselves, which depends on actual archicture design.
+
+Privacy->DB: storesAllInVehicleCameraButtonsStatus()
+
+note over Privacy, DB #F9E79F: Privacy service only stores all buttons status in DB while user di-authorizes.
+
+Privacy->Privacy: disableAllInVehicleCameraButtons()
+activate Privacy #gold
+
+
+Privacy->HMI: async reset(DMSSwitch)
+HMI->CarService: async dispatch
+
+CarService-#2980B9>ADAS: <color: #2980B9>**DMSSwReq(0x01)**</color>
+ADAS-#2980B9>CarService: <color: #2980B9>**DMSDspCmd(0x01)**</color>
+CarService-->HMI: return DMSSwitch(False)
+
+deactivate Privacy
+
+# VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
+end
+entryspacing 0
+note over user, ADAS #lightblue: Now DMSSwitch has been displaying with status as "disabled"
+
+
+entryspacing 3
+
+group #2980B9 InVehicleCameraNotAuthorized -> InVehicleCameraAuthorized [User selected Autorized from NotAuthorized on HMI]
+entryspacing 1
+DMS-#red:3xcamera: <color: #red>**videocapture**</color>
+camera--#red>DMS: <color: #red>onError -> \nVIDEOCAPTURE_STATUS_ERROR</color>
+DMS->DMS: start VIDEOCAPTURE_RETRY_TIMER_18s
+note over DMS, ADAS#lightblue: DMSService retries every 18s.
+
+user->HMI: set(InVehicleCameraAuthorized)
+HMI->Privacy: dispatch
+
+DMS<-#2980B9:3>camera: <color: #2980B9>**videocapture**</color>
+
+Privacy->DB: async getAllInVehicleCameraButtonsStatus()
+DB-->Privacy: return {DMSSwitch: true}
+
+Privacy->Privacy: enableDMSSwitch()
+activate Privacy #gold
+
+
+Privacy->HMI: async set(DMSSwitch)
+
+
+
+HMI->CarService: async dispatch
+CarService-#2980B9>ADAS: <color: #2980B9>**DMSSwReq(0x02)**</color>
+
+ADAS-#2980B9>CarService: <color: #2980B9>**DMSDspCmd(0x02)**</color>
+CarService-->HMI: return DMSSwitch(True)
+
+
+deactivate Privacy
+
+# VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
+end
+entryspacing 0
+note over user, ADAS #lightblue:  Now all in-vehicle camera buttons have been back in the status before user di-authorized.
