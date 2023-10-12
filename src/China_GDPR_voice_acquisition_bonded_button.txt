@@ -1,4 +1,4 @@
-title China_GDPR_voice_acquisition_bonded_button_v1.3
+title China_GDPR_voice_acquisition_bonded_button_v1.4
 
 
 actor #6495ED "user" as user
@@ -17,7 +17,10 @@ activate ADAS #2980B9
 
 note over HMI, CarService#F9E79F: The actuall implementation service names would be different.
 
-note over user, ADAS#F9E79F: Version 1.0: Initial drafted to complete the scenarios of normal VoiceAcquisitionNotAuthorized and VoiceAcquisitionAuthorized.
+note over user, ADAS#F9E79F: Version 1.0: Initial drafted to complete the scenarios of normal VoiceAcquisitionNotAuthorized and VoiceAcquisitionAuthorized.\nVersion 1.1: Added in 2023-09-25 to complete the "auto-disable" scenarios with the benchmarks of Xipeng P7.\nVersion 1.2: Added in 2023-09-26 to complete the "auto-enable" scenarios with the benchmarks of Xipeng P7.\nVersion 1.3: Revised the "button status storage" mechanism to meet product requirements.\nVersion 1.4: Corrected a typo mistake with "MCU" participant. 
+
+
+
 
 ==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
 
@@ -67,11 +70,7 @@ note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displayi
 entryspacing 3
 
 
-note over user, ADAS #F9E79F: Version 1.1: Added in 2023-09-25 to complete the "auto-disable" scenarios with the benchmarks of Xipeng P7.
-
 entryspacing 1
-
-note over user, ADAS #F9E79F: Version 1.3: Revised the "button status storage" mechanism to meet product requirements.
 
 
 group #gold VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized [User selected NotAutorized from Authorized on HMI]
@@ -107,7 +106,6 @@ note over user, ADAS #lightblue: Now AdasAccVoiceControlButton has been displayi
 
 entryspacing 3
 
-note over user, ADAS #F9E79F: Version 1.2: Added in 2023-09-26 to complete the "auto-enable" scenarios with the benchmarks of Xipeng P7.
 
 entryspacing 1
 group #2980B9 VoiceAcquisitionNotAuthorized -> VoiceAcquisitionAuthorized [User selected Autorized from NotAuthorized on HMI]
@@ -139,7 +137,7 @@ deactivate Privacy
 # VoiceAcquisitionAuthorized -> VoiceAcquisitionNotAuthorized
 end
 entryspacing 0
-note over user, MCU #lightblue: Now all voice acquisition buttons have been back in the status before user di-authorized.
+note over user, ADAS #lightblue: Now all voice acquisition buttons have been back in the status before user di-authorized.
 
 
 

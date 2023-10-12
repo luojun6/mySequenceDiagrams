@@ -1,0 +1,133 @@
+title China_GDPR_headunit_authorization_expired_v1.0
+
+boundary "HMI" as HMI #gold
+control "PrivacyService" as Privacy #gold
+
+entity "LocationService" as Location #gold
+database "SqliteDB" as DB #gold
+control SubscribedService #gold
+
+note over HMI, SubscribedService#F9E79F: The actuall implementation service names would be different.
+
+note over Privacy, SubscribedService#F9E79F: SubscribedService contains any service subscribed the PrivateAuth from PrivacyService.\nWhich includes CarService, TboxService, SomeipService, etc. which needs to interacts with external networks.
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+
+activate HMI #gold
+activate Privacy #gold
+activate Location #gold
+activate DB #gold
+activate SubscribedService #gold
+
+==Head Unit System has completed initialization==#gold
+
+Privacy->DB: get(PrivateAuth)
+DB-->Privacy: return PrivateAuth
+note over Privacy, DB#lightblue: PrivateAuth.PosAuthSts == 0x02 (Date limited authorized)
+
+Location<#2980B9-SubscribedService:<color: #2980B9>registerLocationListener()</color>
+Location--#2980B9>SubscribedService: <color: #2980B9>return success()</color>
+Location->Location: onLocationChanged()
+Location--#2980B9>SubscribedService: <color: #2980B9>notifyLocationChanged()</color>
+Location->Location: onLocationChanged()
+Location--#2980B9>SubscribedService: <color: #2980B9>notifyLocationChanged()</color>
+
+entryspacing 3
+
+Privacy->Privacy: PosAuthDateExpired
+
+entryspacing 1
+
+Privacy->DB: async set(PrivateAuth.PosAuthSts, 0x03)
+DB-->Privacy: return success
+
+note over Privacy, SubscribedService#F9E79F: PrivacySevice will notify the subscribed service in next power on cycle.
+
+par #gold Head unit restart gracefully
+
+==Vehicle System Power Mode == OFF & User has accessed into vehicle(VehLckngSts -> Exterior_Locked from Unlocked)==#lightblue
+
+parallel
+HMI->HMI: onKernelShutdown()
+Privacy->Privacy:onKernelShutdown()
+Location->Location: onKernelShutdown()
+DB->DB: onKernelShutdown()
+SubscribedService->SubscribedService: onKernelShutdown()
+parallel off
+
+
+==Head Unit System shutdown==#gold
+deactivate HMI #gold
+deactivate Privacy #gold
+deactivate Location #gold
+deactivate DB #gold
+deactivate SubscribedService #gold
+
+entryspacing 3
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+entryspacing 1
+
+activate HMI #gold
+activate Privacy #gold
+activate Location #gold
+activate DB #gold
+activate SubscribedService #gold
+
+==Head Unit System has completed initialization==#gold
+
+thread Head unit restart disgracefully
+HMI->HMI: onRestartFromUser()
+parallel
+HMI->HMI: onKernelShutdown()
+Privacy->Privacy:onKernelShutdown()
+Location->Location: onKernelShutdown()
+DB->DB: onKernelShutdown()
+SubscribedService->SubscribedService: onKernelShutdown()
+parallel off
+
+==Head Unit System shutdown==#gold
+
+deactivate HMI #gold
+deactivate Privacy #gold
+deactivate Location #gold
+deactivate DB #gold
+deactivate SubscribedService #gold
+
+entryspacing 3
+==Head unit restarts while [Vehicle System Power Mode == RUN & User has accessed into vehicle]==#lightblue
+entryspacing 1
+activate HMI #gold
+activate Privacy #gold
+activate Location #gold
+activate DB #gold
+activate SubscribedService #gold
+
+==Head Unit System has completed initialization==#gold
+
+end
+
+
+par #gold Head unit processes PrivateAuth.PosAuthSts from 0x03 (Date limited authorization expired) scenario
+Privacy->DB: get(PrivateAuth)
+DB-->Privacy: return PrivateAuth
+note over Privacy, DB#lightblue: PrivateAuth.PosAuthSts == 0x03 (Date limited authorization expired)
+
+
+Privacy->SubscribedService: async notify(PrivateAuth)
+par #lightblue Headunit <--someip--> GW Vehicle Architecture
+SubscribedService->SubscribedService: SomeipService.publishToVehicleNetwork()
+thread Headunit <--USB--> Tbox Vehicle Architecture
+SubscribedService->SubscribedService: TboxService.publishToVehicleNetwork()
+thread Headunit <--4G mobile network --> TSP
+SubscribedService->SubscribedService: ClientGateway.postToTSP()
+end
+
+Location<#2980B9-SubscribedService:<color: #2980B9>registerLocationListener()</color>
+Location--#red>SubscribedService: <color: #red>return ERROR()</color>
+Location->Location: onLocationChanged()
+Location--#redxSubscribedService: <color: #red>notifyLocationChanged()</color>
+Location->Location: onLocationChanged()
+Location--#redxSubscribedService: <color: #red>notifyLocationChanged()</color>
+
+end
