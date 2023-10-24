@@ -1,0 +1,40 @@
+title Time Zone Setting - SystemSetting App v1.0
+
+actor #6495ED User
+boundary "HMI" as HMI #gold
+control SystemSetting #gold
+control App #gold
+database Persistency #gold
+boundary CarService #gold
+
+entity IPK #2980B9
+
+==Vehicle System Power Mode == RUN & User has accessed into vehicle==#lightblue
+
+activate User #6495ED
+activate HMI #gold
+activate SystemSetting #gold
+activate App #gold
+activate Persistency #gold
+activate CarService #gold
+activate IPK #2980B9
+
+
+
+IPK->CarService: CAN: hour, minute, second
+SystemSetting->CarService: async get(Hour), get(Minute), get(second)
+CarService-->SystemSetting: return hour, minute, second
+
+SystemSetting->SystemSetting: System.currentGnssTimeClock() 
+SystemSetting->Persistency:get(TimeZoneSetting)
+Persistency-->SystemSetting: TimeZoneSetting
+SystemSetting->SystemSetting: SystemClock.setCurrentTImeMillis()
+SystemSetting->SystemSetting: checkCurrentTime()
+SystemSetting->HMI: display(CurrentTime)
+
+User->HMI: set TimeZoneSetting
+HMI->SystemSetting:dispatch
+SystemSetting->SystemSetting: calculateNewCurrentTime()
+SystemSetting->Persistency: set(TimeZoneSetting)
+SystemSetting->SystemSetting: SystemClock.setCurrentTImeMillis()
+App->SystemSetting: System.currentTimeMillis() 

@@ -1,0 +1,73 @@
+title EV Mileage Range Setting - FICM v1.1
+
+actor user #gold
+boundary "Vehicle CAN Network" as vehicle #lightblue
+control "MCU CAN/LIN Network" as MCU_NM #6495ED
+control "MCU EEPROM Mangement" as MCU_EEP #6495ED
+
+boundary SoC_OS #gold
+
+==Verson1.0: Initial released.\nVersion1.1: Added the [Actual implemention in EP39] group.==#gold
+
+==Vehicle System Power Mode == RUN & User has accessed into the vehicle==#lightblue
+activate user #gold
+activate vehicle #lightblue
+activate MCU_NM #6495ED
+activate MCU_EEP #6495ED
+==SoC_OS has completed initialization==#gold
+activate SoC_OS #gold
+
+MCU_NM->vehicle: CAN: FICMSetIMCUVehElecRngAlg == 0 (cltc)
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_cltc & IMCUVehElecRngV == 1
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_cltc & IMCUVehElecRngV == 1
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_cltc & IMCUVehElecRngV == 1
+user->SoC_OS:select FICMSetIMCUVehElecRngAlg as 1 (actual)
+SoC_OS->MCU_NM: IPCL: FICMSetIMCUVehElecRngAlg = 1
+MCU_NM->MCU_EEP: store(FICMSetIMCUVehElecRngAlg)
+MCU_NM->vehicle: CAN: FICMSetIMCUVehElecRngAlg == 1 (actual)
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_actual & IMCUVehElecRngV == 1
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_actual & IMCUVehElecRngV == 1
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_actual & IMCUVehElecRngV == 1
+
+==Vehicle System Power Mode == OFF & User has left the vehicle==#lightblue
+deactivate user #gold
+deactivate vehicle #lightblue
+==SoC_OS has completed shutdown process==#gold
+deactivate SoC_OS #gold
+deactivate MCU_NM #6495ED
+deactivate MCU_EEP #6495ED
+
+entryspacing 3
+
+==Vehicle System Power Mode == RUN & User has accessed into the vehicle==#lightblue
+entryspacing 1
+activate user #gold
+activate vehicle #lightblue
+activate MCU_NM #6495ED
+activate MCU_EEP #6495ED
+MCU_NM->vehicle: CAN: FICMSetIMCUVehElecRngAlg == 0 (cltc)
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_cltc & IMCUVehElecRngV == 1
+note over MCU_NM #F9E79F: Instrument Cluster Display woud need more than 2s for initialization.\n[IMCUVehElecRng == value_cltc] would not be displayed.
+MCU_NM->MCU_EEP: get(FICMSetIMCUVehElecRngAlg)
+MCU_EEP-->MCU_NM: return FICMSetIMCUVehElecRngAlg as 1 (actual)
+
+MCU_NM->vehicle: CAN: FICMSetIMCUVehElecRngAlg == 1 (actual)
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_actual & IMCUVehElecRngV == 1
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_actual & IMCUVehElecRngV == 1
+vehicle->MCU_NM: CAN: IMCUVehElecRng == value_actual & IMCUVehElecRngV == 1
+
+==SoC_OS has completed initialization==#gold
+activate SoC_OS #gold
+
+group #gold Epected platform sequence 
+SoC_OS->MCU_NM: IPCL: get(FICMSetIMCUVehElecRngAlg)
+MCU_NM-->SoC_OS: return FICMSetIMCUVehElecRngAlg as 1 (actual)
+end
+
+group #lightblue Actual implementation in EP39
+SoC_OS->SoC_OS: SqliteDB: get(FICMSetIMCUVehElecRngAlg)
+SoC_OS->MCU_NM: IPCL: set(FICMSetIMCUVehElecRngAlg) with value == 1 (actual)
+end
+
+
+SoC_OS->user: display FICMSetIMCUVehElecRngAlg as 1 (actual)

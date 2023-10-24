@@ -1,4 +1,4 @@
-title China_GDPR_headunit_sync_with_USB v1.0
+title China_GDPR_headunit_sync_with_USB v1.1
 
 actor #6495ED "user" as user
 boundary "HMI" as HMI #gold
@@ -8,6 +8,8 @@ database "SqliteDB" as DB #gold
 control TBOXService #gold
 
 boundary "TBOX - DataProvider" as TBOX #2980B9
+
+==Version 1.0 Initial release.\nVersion 1.1 Revised the USB_API from 0x0202(SetPrivacyMode) to 0x020E(PrivaAuth).==#gold
 
 note over HMI, TBOXService #F9E79F: The actuall implemented service names might be different due to the actual implementation OS.
 
@@ -32,12 +34,12 @@ DB-->Privacy: return PrivateAuth
 Privacy->TBOXService: activate
 activate TBOXService #gold
 
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService<-->TBOX: Res(0x020E): PrivaAuth
 TBOXService->TBOXService: timer_10s()
 
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService<-->TBOX: Res(0x020E): PrivaAuth
 
 note over TBOXService, TBOX #F9E79F: Publish to TBOX with 10s period
 
@@ -73,12 +75,12 @@ Privacy->DB: async set("PrivateAuth", PrivateAuth)
 
 DB-->Privacy: return success
 Privacy->TBOXService: async post(PrivateAuth)
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService<-->TBOX: Res(0x020E): PrivaAuth
 TBOXService->TBOXService: timer_10s()
 
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService<-->TBOX: Res(0x020E): PrivaAuth
 
 
 # PrivacyClaimPopup
@@ -92,12 +94,12 @@ HMI->Privacy: async dispatch
 Privacy->DB: async set("PrivateAuth", PrivateAuth)
 DB-->Privacy: return success
 Privacy->TBOXService: async post(PrivateAuth)
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService<-->TBOX: Res(0x020E): PrivaAuth
 TBOXService->TBOXService: timer_10s()
 
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService<-->TBOX: Res(0x0202): SetPrivacyModeAllowed
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService<-->TBOX: Res(0x020E): PrivaAuth
 
 TBOXService->TBOX: cyclic_10s event()
 note over TBOXService, TBOX #F9E79F: Publish to vehicle ethernet with 10s period
@@ -109,8 +111,8 @@ group #gold UnhappyPathFailedToSync [Headunit failed to sync with TBOX]
 
 loop #red FailedToSync [retryCount < 3]
 Privacy->TBOXService: async post(PrivateAuth)
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService-->TBOXService: Req(0x0202: timeout
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService-->TBOXService: Req(0x020E: timeout
 end
 TBOXService->DB: set("PrivateAuthSync" false)
 
@@ -122,8 +124,8 @@ DB-->Privacy: return false
 
 loop #red FailedToSync [retryCount < 3]
 Privacy->TBOXService: async post(PrivateAuth)
-TBOXService->TBOX:Req(0x0202): SetPrivacyModeAllowed
-TBOXService-->TBOXService: Req(0x0202: timeout
+TBOXService->TBOX:Req(0x020E): PrivaAuth
+TBOXService-->TBOXService: Req(0x020E: timeout
 end
 end
 TBOXService->DB: set("PrivateAuthSync" false)
