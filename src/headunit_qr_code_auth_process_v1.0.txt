@@ -1,0 +1,103 @@
+title IVI Headunit QR Code Authentication Process
+
+actor #6495ED user
+fontawesome6regular f3ce "mobile app" as app #6495ED
+
+participantgroup #lightyellow IVI Headunit
+boundary "HMI" as HMI #gold
+control AccountManager #gold
+control LoginIviApp #gold
+database UserSettingDB #gold
+boundary ClientGateway #gold
+end
+
+
+participantgroup #lightblue OEM-TSP
+boundary C-Gateway #2980B9
+boundary OpenAPI #2980B9
+control AuthCenter #2980B9
+end 
+
+==Notice: This diagram is just to manifest a common vehicle connected headunit authentication process, the actual implementation might be different.==#F9E79F
+==v1.0: First drafted.==#F9E79F
+
+activate C-Gateway #2980B9
+activate OpenAPI #2980B9
+activate AuthCenter #2980B9
+
+activate user #6495ED
+
+abox over HMI, ClientGateway #lightblue: Vehicle System Power Mode == RUN & User has accessed into vehicle
+
+activate HMI #gold
+activate AccountManager #gold
+activate LoginIviApp #gold
+activate UserSettingDB #gold
+activate ClientGateway #gold
+
+abox over HMI, ClientGateway #lightblue: Headunit OS has completed initializaiton
+
+AccountManager->LoginIviApp: checkLoginStatus
+
+alt #6495ED Logined
+LoginIviApp->AccountManager: return loginedAccountInfo
+else NotLogined 
+
+LoginIviApp->LoginIviApp: get vin \nfrom persistency
+LoginIviApp->HMI: showQrCode(VIN)
+
+user->app: scanQrCode
+
+activate app #6495ED
+
+HMI-->app: interperetQrCode
+app->OpenAPI: authenticate(vin, userid)
+
+OpenAPI->AuthCenter: dispatch authenticate
+
+loop #F9E79F polling
+app->OpenAPI: pull(UserToken)
+end
+
+
+LoginIviApp->UserSettingDB: get(tokenType)
+UserSettingDB-->LoginIviApp: return tokenType
+LoginIviApp->UserSettingDB: get(tspUrl)
+UserSettingDB-->LoginIviApp: return tspUrl
+LoginIviApp->ClientGateway: postAuthReq(vin, tokenType) via tspUrl
+ClientGateway->C-Gateway: dispatch postAuthReq
+C-Gateway->AuthCenter: dispatch postAuthReq
+
+AuthCenter->AuthCenter: determineUserAuthorizedDevice
+
+
+loop #F9E79F polling
+LoginIviApp->ClientGateway: pull(AccessToken)
+end
+
+
+
+
+
+
+AuthCenter->C-Gateway: post(AccessToken)
+C-Gateway->ClientGateway: dispatch AccessToken
+ClientGateway-->LoginIviApp: return AccessToken
+LoginIviApp->UserSettingDB: set(AccessToken)
+
+LoginIviApp->ClientGateway: fetchUserInfo(AccessToken)
+ClientGateway->C-Gateway: dispatch fetchAccountInfo
+C-Gateway->AuthCenter: dispatch fetchAccountInfo
+AuthCenter-->C-Gateway: return AccountInfo
+C-Gateway->ClientGateway: dispatch AccountInfo
+ClientGateway->LoginIviApp: dispatch AccountInfo
+LoginIviApp-->AccountManager: return loginedAccountInfo
+
+AccountManager->UserSettingDB: set(AccountInfo)
+
+AuthCenter->OpenAPI: post(UserToken)
+OpenAPI-->app: return UserToken
+app->OpenAPI: fetchVehicleInfo(UserToken)
+OpenAPI-->app: return VehicleInfo
+app->app: manifestVehicleInfo()
+end 
